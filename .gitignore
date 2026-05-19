@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 venv/
 uploads/
 ＿pycache＿/
 *.pyc
+=======
+venv/
+uploads/
+__pycache__/
+*.pyc
+>>>>>>> ffe9fd4fb11e09fb55b06fab1edfda8aaf381bb8
 app.db

@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 Flask
 Flask-Login
 werkzeug
+=======
+Flask
+Flask-Login
+Werkzeug
+>>>>>>> ffe9fd4fb11e09fb55b06fab1edfda8aaf381bb8
 gunicorn
