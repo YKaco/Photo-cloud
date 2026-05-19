@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Photo Cloud</title>
+
+    <style>
+        body{
+            font-family: Arial;
+            background:#f5f5f5;
+            margin:20px;
+        }
+
+        h1{
+            text-align:center;
+        }
+
+        .upload-box{
+            text-align:center;
+            margin-bottom:30px;
+        }
+
+        .gallery{
+            display:grid;
+            grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
+            gap:15px;
+        }
+
+        .photo{
+            background:white;
+            border-radius:10px;
+            overflow:hidden;
+            box-shadow:0 2px 5px rgba(0,0,0,0.2);
+            padding:10px;
+        }
+
+        .photo img{
+            width:100%;
+            height:250px;
+            object-fit:cover;
+        }
+
+        a{
+            text-decoration:none;
+            margin:0 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>📸 Photo Cloud</h1>
+
+{% if error %}
+    <p style="color:red; text-align:center;">{{ error }}</p>
+{% endif %}
+
+<!-- アップロード＆メニュー -->
+<div class="upload-box">
+
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="photo">
+        <button type="submit">アップロード</button>
+    </form>
+
+    <div style="text-align:center; margin-top:20px; margin-bottom:20px;">
+
+        <a href="/?view=month&sort=desc">月ごと表示</a> |
+        <a href="/?view=list&sort=desc">一覧</a> |
+        <a href="/?view=list&sort=desc">新しい順</a> |
+        <a href="/?view=list&sort=asc">古い順</a>
+
+    </div>
+
+    <br>
+    <a href="/change_password">パスワード変更</a>
+
+    <br><br>
+
+    <a href="/logout">ログアウト</a>
+
+</div>
+
+<!-- 表示部分 -->
+{% if view == "month" %}
+
+    {% for month, imgs in images.items() %}
+
+        <h2 style="text-align:center;">{{ month }}</h2>
+
+        <div class="gallery">
+
+            {% for img, time in imgs %}
+            <div class="photo">
+
+                <img src="{{ url_for('uploaded_file', filename=img) }}">
+
+                <p style="text-align:center;">{{ time }}</p>
+
+                <form action="/delete/{{ img }}" method="post"
+                      onsubmit="return confirm('本当に削除しますか？');"
+                      style="text-align:center;">
+
+                    <button type="submit">削除</button>
+
+                </form>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <div class="gallery">
+
+        {% for img, time in images %}
+
+        <div class="photo">
+
+            <img src="{{ url_for('uploaded_file', filename=img) }}">
+
+            <p style="text-align:center;">{{ time }}</p>
+
+            <form action="/delete/{{ img }}" method="post"
+                  onsubmit="return confirm('本当に削除しますか？');"
+                  style="text-align:center;">
+
+                <button type="submit">削除</button>
+
+            </form>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+{% endif %}
+
+</body>
+</html>
