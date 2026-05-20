@@ -1,7 +1,6 @@
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask import Flask, request, render_template, redirect, abort, url_for
+from flask import Flask, request, render_template, redirect, abort
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 from datetime import datetime
 from collections import defaultdict
 from dotenv import load_dotenv
@@ -11,7 +10,8 @@ import cloudinary.uploader
 import cloudinary.api
 
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import uuid
 
 load_dotenv()
@@ -51,27 +51,32 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ------------------------
+# DB接続
+# ------------------------
+def get_conn():
+    return psycopg2.connect(os.environ.get("DATABASE_URL"))
+
+# ------------------------
 # DB初期化
 # ------------------------
 def init_db():
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                username TEXT PRIMARY KEY,
-                password TEXT
-            )
-        """)
-        # cloudinary_id: 削除に使うpublic_id、image_url: 表示用URL
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS images (
-                id TEXT PRIMARY KEY,
-                username TEXT,
-                cloudinary_id TEXT,
-                image_url TEXT,
-                upload_time TEXT
-            )
-        """)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    username TEXT PRIMARY KEY,
+                    password TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS images (
+                    id TEXT PRIMARY KEY,
+                    username TEXT,
+                    cloudinary_id TEXT,
+                    image_url TEXT,
+                    upload_time TEXT
+                )
+            """)
         conn.commit()
 
 # ------------------------
@@ -89,15 +94,15 @@ def load_user(user_id):
 # DB操作
 # ------------------------
 def get_user(username):
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE username=?", (username,))
-        return cur.fetchone()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE username=%s", (username,))
+            return cur.fetchone()
 
 def insert_user(username, password_hash):
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
-        cur.execute("INSERT INTO users VALUES (?, ?)", (username, password_hash))
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users VALUES (%s, %s)", (username, password_hash))
         conn.commit()
 
 # ------------------------
@@ -169,12 +174,12 @@ def change_password():
         elif len(new_password) < 4:
             error = "パスワードは4文字以上で設定してください"
         else:
-            with sqlite3.connect("app.db") as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    "UPDATE users SET password=? WHERE username=?",
-                    (generate_password_hash(new_password), current_user.id)
-                )
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE users SET password=%s WHERE username=%s",
+                        (generate_password_hash(new_password), current_user.id)
+                    )
                 conn.commit()
             success = "パスワードを変更しました"
     return render_template("change_password.html", error=error, success=success)
@@ -189,27 +194,27 @@ def index():
     sort = request.args.get("sort", "desc")
     order = "DESC" if sort != "asc" else "ASC"
 
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
 
-        if view == "list":
+            if view == "list":
+                cur.execute(f"""
+                    SELECT cloudinary_id, image_url, upload_time
+                    FROM images
+                    WHERE username=%s
+                    ORDER BY upload_time {order}
+                """, (current_user.id,))
+                images = cur.fetchall()
+                return render_template("index.html", images=images, view="list", sort=sort)
+
             cur.execute(f"""
-                SELECT cloudinary_id, image_url, upload_time
+                SELECT cloudinary_id, image_url, upload_time,
+                       TO_CHAR(upload_time::timestamp, 'YYYY-MM')
                 FROM images
-                WHERE username=?
+                WHERE username=%s
                 ORDER BY upload_time {order}
             """, (current_user.id,))
-            images = cur.fetchall()
-            return render_template("index.html", images=images, view="list", sort=sort)
-
-        cur.execute(f"""
-            SELECT cloudinary_id, image_url, upload_time,
-                   strftime('%Y-%m', upload_time)
-            FROM images
-            WHERE username=?
-            ORDER BY upload_time {order}
-        """, (current_user.id,))
-        rows = cur.fetchall()
+            rows = cur.fetchall()
 
     grouped = defaultdict(list)
     for cloudinary_id, image_url, time, month in rows:
@@ -223,29 +228,26 @@ def index():
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload():
-    file = request.files.get("photo")
-    if not file or file.filename == "":
-        return redirect("/")
-    if not allowed_file(file.filename):
+    files = request.files.getlist("photo")
+    if not files or files[0].filename == "":
         return redirect("/")
 
-    # Cloudinaryにアップロード（ユーザーごとのフォルダに保存）
-    result = cloudinary.uploader.upload(
-        file,
-        folder=f"photo_cloud/{current_user.id}",
-        resource_type="image"
-    )
-
-    cloudinary_id = result["public_id"]
-    image_url = result["secure_url"]
     upload_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO images VALUES (?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), current_user.id, cloudinary_id, image_url, upload_time)
-        )
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for file in files:
+                if not allowed_file(file.filename):
+                    continue
+                result = cloudinary.uploader.upload(
+                    file,
+                    folder=f"photo_cloud/{current_user.id}",
+                    resource_type="image"
+                )
+                cur.execute(
+                    "INSERT INTO images VALUES (%s, %s, %s, %s, %s)",
+                    (str(uuid.uuid4()), current_user.id, result["public_id"], result["secure_url"], upload_time)
+                )
         conn.commit()
 
     return redirect("/")
@@ -256,24 +258,19 @@ def upload():
 @app.route("/delete/<path:cloudinary_id>", methods=["POST"])
 @login_required
 def delete_file(cloudinary_id):
-    # 所有者確認
-    with sqlite3.connect("app.db") as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT 1 FROM images WHERE cloudinary_id=? AND username=?",
-            (cloudinary_id, current_user.id)
-        )
-        if not cur.fetchone():
-            abort(403)
-
-        # Cloudinaryから削除
-        cloudinary.uploader.destroy(cloudinary_id)
-
-        # DBから削除
-        cur.execute(
-            "DELETE FROM images WHERE cloudinary_id=? AND username=?",
-            (cloudinary_id, current_user.id)
-        )
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM images WHERE cloudinary_id=%s AND username=%s",
+                (cloudinary_id, current_user.id)
+            )
+            if not cur.fetchone():
+                abort(403)
+            cloudinary.uploader.destroy(cloudinary_id)
+            cur.execute(
+                "DELETE FROM images WHERE cloudinary_id=%s AND username=%s",
+                (cloudinary_id, current_user.id)
+            )
         conn.commit()
 
     return redirect("/")
