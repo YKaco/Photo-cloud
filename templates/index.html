@@ -2,140 +2,218 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Cloud</title>
-
     <style>
-        body{
-            font-family: Arial;
-            background:#f5f5f5;
-            margin:20px;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #f0ede8;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        h1{
-            text-align:center;
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 960px;
+            margin: 0 auto 24px;
         }
 
-        .upload-box{
-            text-align:center;
-            margin-bottom:30px;
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
         }
 
-        .gallery{
-            display:grid;
-            grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
-            gap:15px;
+        .header-links {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
         }
 
-        .photo{
-            background:white;
-            border-radius:10px;
-            overflow:hidden;
-            box-shadow:0 2px 5px rgba(0,0,0,0.2);
-            padding:10px;
+        .header-links a {
+            color: #888;
+            text-decoration: none;
         }
 
-        .photo img{
-            width:100%;
-            height:250px;
-            object-fit:cover;
+        .header-links a:hover { color: #1a1a1a; }
+
+        .upload-box {
+            background: #fff;
+            border: 1px dashed #ccc;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            max-width: 960px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        a{
-            text-decoration:none;
-            margin:0 5px;
+        .upload-box input[type="file"] {
+            font-size: 13px;
+            color: #555;
         }
+
+        .btn {
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-dark { background: #1a1a1a; color: #fff; }
+        .btn-dark:hover { background: #333; }
+
+        .view-nav {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 13px;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .view-nav a {
+            padding: 5px 14px;
+            border-radius: 99px;
+            border: 1px solid #ddd;
+            color: #555;
+            text-decoration: none;
+            background: #fff;
+            transition: background 0.15s;
+        }
+
+        .view-nav a:hover,
+        .view-nav a.active {
+            background: #1a1a1a;
+            color: #fff;
+            border-color: #1a1a1a;
+        }
+
+        .month-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #888;
+            max-width: 960px;
+            margin: 0 auto 12px;
+            padding: 0 4px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+            max-width: 960px;
+            margin: 0 auto 32px;
+        }
+
+        .photo {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e4e0da;
+        }
+
+        .photo img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-meta {
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .photo-time {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .btn-delete {
+            font-size: 11px;
+            color: #cc4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .btn-delete:hover { background: #fef2f2; }
     </style>
 </head>
-
 <body>
 
-<h1>📸 Photo Cloud</h1>
-
-{% if error %}
-    <p style="color:red; text-align:center;">{{ error }}</p>
-{% endif %}
-
-<!-- アップロード＆メニュー -->
-<div class="upload-box">
-
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="photo">
-        <button type="submit">アップロード</button>
-    </form>
-
-    <div style="text-align:center; margin-top:20px; margin-bottom:20px;">
-
-        <a href="/?view=month&sort=desc">月ごと表示</a> |
-        <a href="/?view=list&sort=desc">一覧</a> |
-        <a href="/?view=list&sort=desc">新しい順</a> |
-        <a href="/?view=list&sort=asc">古い順</a>
-
+<header>
+    <div class="logo">📸 Photo Cloud</div>
+    <div class="header-links">
+        <a href="/change_password">パスワード変更</a>
+        <a href="/logout">ログアウト</a>
     </div>
+</header>
 
-    <br>
-    <a href="/change_password">パスワード変更</a>
+<form action="/upload" method="post" enctype="multipart/form-data" class="upload-box">
+    <input type="file" name="photo" accept="image/*">
+    <button type="submit" class="btn btn-dark">アップロード</button>
+</form>
 
-    <br><br>
-
-    <a href="/logout">ログアウト</a>
-
+<div class="view-nav">
+    <a href="/?view=month&sort=desc" class="{{ 'active' if view == 'month' else '' }}">月ごと</a>
+    <a href="/?view=list&sort=desc" class="{{ 'active' if view == 'list' and sort == 'desc' else '' }}">新しい順</a>
+    <a href="/?view=list&sort=asc" class="{{ 'active' if view == 'list' and sort == 'asc' else '' }}">古い順</a>
 </div>
 
-<!-- 表示部分 -->
 {% if view == "month" %}
 
     {% for month, imgs in images.items() %}
-
-        <h2 style="text-align:center;">{{ month }}</h2>
-
+        <div class="month-label">{{ month }}</div>
         <div class="gallery">
-
-            {% for img, time in imgs %}
+            {% for cloudinary_id, image_url, time in imgs %}
             <div class="photo">
-
-                <img src="{{ url_for('uploaded_file', filename=img) }}">
-
-                <p style="text-align:center;">{{ time }}</p>
-
-                <form action="/delete/{{ img }}" method="post"
-                      onsubmit="return confirm('本当に削除しますか？');"
-                      style="text-align:center;">
-
-                    <button type="submit">削除</button>
-
-                </form>
-
+                <img src="{{ image_url }}" alt="{{ time }}の写真">
+                <div class="photo-meta">
+                    <span class="photo-time">{{ time }}</span>
+                    <form action="/delete/{{ cloudinary_id }}" method="post"
+                          onsubmit="return confirm('削除しますか？');">
+                        <button type="submit" class="btn-delete">削除</button>
+                    </form>
+                </div>
             </div>
             {% endfor %}
-
         </div>
-
     {% endfor %}
 
 {% else %}
 
     <div class="gallery">
-
-        {% for img, time in images %}
-
+        {% for cloudinary_id, image_url, time in images %}
         <div class="photo">
-
-            <img src="{{ url_for('uploaded_file', filename=img) }}">
-
-            <p style="text-align:center;">{{ time }}</p>
-
-            <form action="/delete/{{ img }}" method="post"
-                  onsubmit="return confirm('本当に削除しますか？');"
-                  style="text-align:center;">
-
-                <button type="submit">削除</button>
-
-            </form>
-
+            <img src="{{ image_url }}" alt="{{ time }}の写真">
+            <div class="photo-meta">
+                <span class="photo-time">{{ time }}</span>
+                <form action="/delete/{{ cloudinary_id }}" method="post"
+                      onsubmit="return confirm('削除しますか？');">
+                    <button type="submit" class="btn-delete">削除</button>
+                </form>
+            </div>
         </div>
-
         {% endfor %}
-
     </div>
 
 {% endif %}

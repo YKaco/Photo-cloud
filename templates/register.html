@@ -1,30 +1,246 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <title>Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規登録 — Photo Cloud</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #f0ede8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid #e4e0da;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            letter-spacing: -0.3px;
+        }
+
+        .logo p {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 3px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #1a1a1a;
+            background: #fafafa;
+            transition: border-color 0.15s, background 0.15s;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #1a1a1a;
+            background: #fff;
+        }
+
+        input.invalid { border-color: #f87171; }
+
+        .mismatch-msg {
+            font-size: 11px;
+            color: #dc2626;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 11px;
+            margin-top: 20px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-primary:hover { background: #333; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { background: #bbb; cursor: not-allowed; transform: none; }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #f0ede8;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .footer-link a {
+            color: #1a1a1a;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .footer-link a:hover { text-decoration: underline; }
+    </style>
 </head>
 <body>
 
-<h1>ユーザー登録</h1>
+<div class="card">
 
-{% if error %}
-    <p style="color:red;">{{ error }}</p>
-{% endif %}
+    <div class="logo">
+        <span class="logo-icon">📸</span>
+        <h1>Photo Cloud</h1>
+        <p>アカウントを作成</p>
+    </div>
 
-<form method="post">
+    {% if error %}
+    <div class="error-box">
+        <span>⚠</span> {{ error }}
+    </div>
+    {% endif %}
 
-    <input type="text" name="username" placeholder="ID">
-    <br><br>
+    <form method="post" autocomplete="on" id="register-form">
 
-    <input type="password" name="password" placeholder="Password">
-    <br><br>
+        <div class="field">
+            <label for="username">ユーザーID</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="英小文字・数字のみ"
+                autocomplete="username"
+                required
+            >
+            <span class="hint">※ 半角英小文字で入力してください（大文字は自動変換されます）</span>
+        </div>
 
-    <button type="submit">登録</button>
+        <div class="field">
+            <label for="password">パスワード</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="8文字以上推奨"
+                autocomplete="new-password"
+                required
+            >
+        </div>
 
-</form>
+        <div class="field">
+            <label for="password_confirm">パスワード（確認）</label>
+            <input
+                type="password"
+                id="password_confirm"
+                name="password_confirm"
+                placeholder="もう一度入力"
+                autocomplete="new-password"
+                required
+            >
+            <span class="mismatch-msg" id="mismatch-msg">パスワードが一致しません</span>
+        </div>
 
-<a href="/login">ログインへ</a>
+        <button type="submit" class="btn-primary" id="submit-btn">登録する</button>
+
+    </form>
+
+    <div class="footer-link">
+        すでにアカウントをお持ちの方は
+        <a href="/login">ログイン</a>
+    </div>
+
+</div>
+
+<script>
+    const pw = document.getElementById('password');
+    const confirm = document.getElementById('password_confirm');
+    const msg = document.getElementById('mismatch-msg');
+    const btn = document.getElementById('submit-btn');
+
+    function checkMatch() {
+        if (confirm.value === '') {
+            msg.style.display = 'none';
+            confirm.classList.remove('invalid');
+            btn.disabled = false;
+            return;
+        }
+        const match = pw.value === confirm.value;
+        msg.style.display = match ? 'none' : 'block';
+        confirm.classList.toggle('invalid', !match);
+        btn.disabled = !match;
+    }
+
+    pw.addEventListener('input', checkMatch);
+    confirm.addEventListener('input', checkMatch);
+</script>
 
 </body>
-
 </html>
