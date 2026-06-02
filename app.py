@@ -125,6 +125,7 @@ def login():
 # ------------------------
 # 新規登録
 # ------------------------
+"""
 @app.route("/register", methods=["GET", "POST"])
 def register():
     error = None
@@ -144,6 +145,7 @@ def register():
             response.set_cookie("registered", "1", max_age=60 * 60 * 24 * 365)
             return response
     return render_template("register.html", error=error)
+    """
 
 # ------------------------
 # ログアウト
